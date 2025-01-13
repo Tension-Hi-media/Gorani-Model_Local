@@ -24,3 +24,6 @@ tqdm==4.67.1
 typing_extensions==4.12.2
 uvicorn==0.34.0
 wheel==0.45.1
+langchain-community==0.3.14
+langchain-core==0.3.29
+langchain-openai==0.3.0
