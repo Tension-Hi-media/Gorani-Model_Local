@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.models.models import TranslateRequest
+from app.models.schemas import TranslateRequest
 
 
 app = FastAPI()
