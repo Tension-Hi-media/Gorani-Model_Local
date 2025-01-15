@@ -1,10 +1,9 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from app.models.models import TranslateRequest
+
 
 app = FastAPI()
 
-class TranslateRequest(BaseModel):
-    text: str
 
 @app.post("/translate")
 async def translate(request: TranslateRequest):
