@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from models.schemas import TranslateRequest, TranslateResponse
+
 from fastapi.middleware.cors import CORSMiddleware
 from models.translation import setup_translation_chain
 import logging
@@ -13,12 +14,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class TranslateRequest(BaseModel):
-    text: str
-
-class TranslateResponse(BaseModel):
-    answer: str
 
 @app.post("/translate")
 async def translate(request: TranslateRequest):
