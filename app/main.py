@@ -39,3 +39,5 @@ async def translateWithGPT(request: TranslateRequest):
     except Exception as e:
         logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
