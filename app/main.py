@@ -1,11 +1,14 @@
 from fastapi import FastAPI, HTTPException
-from models.schemas import TranslateRequest, TranslateResponse
+from app.models.schemas import TranslateRequest, TranslateResponse
 
 from fastapi.middleware.cors import CORSMiddleware
-from models.translation import setup_translation_chain
+from app.models.translation import setup_translation_chain
 import logging
+from app.routes.glossary_router import router as glossary_router
+
 
 app = FastAPI()
+app.include_router(glossary_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,3 +39,5 @@ async def translateWithGPT(request: TranslateRequest):
     except Exception as e:
         logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
