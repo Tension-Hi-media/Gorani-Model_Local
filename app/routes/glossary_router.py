@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from bson import ObjectId 
 import os
 import logging
+from fastapi.responses import JSONResponse
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)  # INFO 레벨 이상의 로그 출력
@@ -30,19 +31,38 @@ class Glossary(BaseModel):
     userId: Optional[int] = None
     words: List[WordPair]
 
+class UpdateGlossaryNameRequest(BaseModel):
+    name: str
+
 from fastapi import HTTPException
 
+#용어집 생성
 @router.post("/api/glossary")
 async def save_glossary(glossary: Glossary):
     if glossary.userId is None:
         raise HTTPException(status_code=400, detail="userId는 필수입니다.")
     try:
-        collection.insert_one(glossary.dict())
-        return {"message": "용어집 저장 성공"}
+        inserted_id = collection.insert_one(glossary.dict()).inserted_id
+        saved_glossary = collection.find_one({"_id": inserted_id})
+        saved_glossary["_id"] = str(saved_glossary["_id"])  # ObjectId를 문자열로 변환
+        return saved_glossary  # 생성된 용어집 데이터를 반환
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+#용어집 이름 변경
+@router.put("/api/glossary/{id}")
+async def update_glossary_name(id: str, request: UpdateGlossaryNameRequest):
+    if not request.name:
+        raise HTTPException(status_code=400, detail="이름은 비어 있을 수 없습니다.")
+    
+    glossary = collection.find_one({"_id": ObjectId(id)})
+    if not glossary:
+        raise HTTPException(status_code=404, detail="용어집을 찾을 수 없습니다.")
 
+    collection.update_one({"_id": ObjectId(id)}, {"$set": {"name": request.name}})
+    return {"message": "용어집 이름 업데이트 성공", "updatedName": request.name}
+
+#용어집 조회
 @router.get("/glossary", tags=["Glossary"])
 def get_glossaries(userId: int):
     """
@@ -58,7 +78,8 @@ def get_glossaries(userId: int):
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+#용어집 삭제
 @router.delete("/api/glossary/{id}")
 async def delete_glossary(id: str):
     try:
@@ -68,6 +89,54 @@ async def delete_glossary(id: str):
         return {"message": "용어집 삭제 성공"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"용어집 삭제 실패: {str(e)}")
+
+# 기본 용어집 설정 후 반환
+@router.put("/api/v1/glossary/{user_id}/default")
+async def set_default_glossary(user_id: int, glossary_id: str = Query(...)):
+    logger.info(f"Received user_id: {user_id}, glossary_id: {glossary_id}")
+
+    # 기존 기본 용어집을 false로 리셋
+    reset_default_glossary(user_id)  # 기존 기본 용어집을 false로 설정
+
+    # 새로운 기본 용어집을 찾아서 isDefault를 True로 설정
+    glossary = collection.find_one({"_id": ObjectId(glossary_id), "userId": user_id})
+    if not glossary:
+        raise HTTPException(status_code=404, detail="해당 유저의 용어집을 찾을 수 없습니다.")
+
+    # 기본 용어집 설정
+    collection.update_one(
+        {"_id": ObjectId(glossary_id), "userId": user_id},
+        {"$set": {"isDefault": True}}
+    )
+
+    # 기본 용어집만 반환
+    default_glossary = collection.find_one({"_id": ObjectId(glossary_id), "userId": user_id})
+    if default_glossary:
+        default_glossary["_id"] = str(default_glossary["_id"])  # ObjectId를 문자열로 변환
+        return JSONResponse(content={"message": "Default glossary set successfully", "glossary": default_glossary})
+
+    raise HTTPException(status_code=500, detail="기본 용어집 설정에 실패했습니다.")
+
+# 기존 기본 용어집을 리셋하는 엔드포인트 정의
+@router.put("/api/v1/glossary/{user_id}/reset-default")
+async def reset_default_glossary(user_id: int):
+    logger.info(f"Received request to reset default glossary for user_id: {user_id}")
+
+    try:
+        # 해당 유저의 모든 용어집에서 기본 용어집을 false로 설정
+        result = collection.update_many(
+            {"userId": user_id}, 
+            {"$set": {"isDefault": False}}
+        )
+
+        # 업데이트된 문서 수를 로그로 출력
+        logger.info(f"Reset {result.modified_count} glossaries' default status to False.")
+
+        return {"message": "All glossaries' default status reset successfully"}
+    
+    except Exception as e:
+        logger.error(f"Error resetting default glossary: {str(e)}")
+        raise HTTPException(status_code=500, detail="기본 용어집 리셋 중 오류 발생")
 
 # add_word_pair에서 _id 추가
 @router.post("/api/glossary/{id}/word-pair", tags=["WordPair"])
@@ -120,8 +189,6 @@ async def update_word_pair(glossaryId: str, wordPairId: str, word_pair: WordPair
     except Exception as e:
         logger.error(f"Failed to update word pair: {e}")
         raise HTTPException(status_code=500, detail=f"단어쌍 수정 실패: {str(e)}")
-
-
 
 @router.delete("/api/glossary/{id}/word-pair/{index}")
 async def delete_word_pair(id: str, index: int):
