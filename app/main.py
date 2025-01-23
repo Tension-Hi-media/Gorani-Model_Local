@@ -1,10 +1,9 @@
 from fastapi import FastAPI, HTTPException
-from app.models.schemas import TranslateRequest, TranslateResponse
-
+from models.schemas import TranslateRequest, TranslateResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.models.translation import setup_translation_chain
+from models.translation import setup_translation_chain
 import logging
-from app.routes.glossary_router import router as glossary_router
+from routes.glossary_router import router as glossary_router
 
 
 app = FastAPI()
