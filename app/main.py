@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from models.schemas import TranslateRequest, TranslateResponse
 from fastapi.middleware.cors import CORSMiddleware
 from models.translation import setup_translation_chain
@@ -9,6 +9,7 @@ from routes.glossary_router import router as glossary_router
 
 app = FastAPI()
 app.include_router(glossary_router)
+translation_chain = setup_translation_chain()
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,16 +23,19 @@ app.add_middleware(
 async def translateWithGPT(request: TranslateRequest):
 
     try:
-        print(request)
+        body = await request.json()
+        text = body.get("text", "")
+        source_lang = body.get("source_lang", "ko")
+        target_lang = body.get("target_lang", "en")
 
-        chain = setup_translation_chain()
+        # 체인에 전달할 입력 데이터 구성
+        result = translation_chain.invoke({
+            "text": text,
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+        })
 
-        response = chain.invoke({"text": request.text})
-
-        return TranslateResponse(
-            answer=response
-        )
-    
+        return {"answer": result}
     except Exception as e:
         logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
