@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from typing import List
 from pymongo import MongoClient
-from bson import ObjectId 
+from bson import ObjectId
 import os
 import logging
 from fastapi.responses import JSONResponse
@@ -37,7 +37,7 @@ class UpdateGlossaryNameRequest(BaseModel):
 from fastapi import HTTPException
 
 #용어집 생성
-@router.post("/api/glossary")
+@router.post("/api/glossary", tags=["Glossary"])
 async def save_glossary(glossary: Glossary):
     if glossary.userId is None:
         raise HTTPException(status_code=400, detail="userId는 필수입니다.")
@@ -50,11 +50,11 @@ async def save_glossary(glossary: Glossary):
         raise HTTPException(status_code=500, detail=str(e))
 
 #용어집 이름 변경
-@router.put("/api/glossary/{id}")
+@router.put("/api/glossary/{id}", tags=["Glossary"])
 async def update_glossary_name(id: str, request: UpdateGlossaryNameRequest):
     if not request.name:
         raise HTTPException(status_code=400, detail="이름은 비어 있을 수 없습니다.")
-    
+
     glossary = collection.find_one({"_id": ObjectId(id)})
     if not glossary:
         raise HTTPException(status_code=404, detail="용어집을 찾을 수 없습니다.")
@@ -80,7 +80,7 @@ def get_glossaries(userId: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 #용어집 삭제
-@router.delete("/api/glossary/{id}")
+@router.delete("/api/glossary/{id}", tags=["Glossary"])
 async def delete_glossary(id: str):
     try:
         result = collection.delete_one({"_id": ObjectId(id)})
@@ -91,7 +91,7 @@ async def delete_glossary(id: str):
         raise HTTPException(status_code=500, detail=f"용어집 삭제 실패: {str(e)}")
 
 # 기본 용어집 설정 후 반환
-@router.put("/api/v1/glossary/{user_id}/default")
+@router.put("/api/v1/glossary/{user_id}/default", tags=["Glossary"])
 async def set_default_glossary(user_id: int, glossary_id: str = Query(...)):
     logger.info(f"Received user_id: {user_id}, glossary_id: {glossary_id}")
 
@@ -118,14 +118,14 @@ async def set_default_glossary(user_id: int, glossary_id: str = Query(...)):
     raise HTTPException(status_code=500, detail="기본 용어집 설정에 실패했습니다.")
 
 # 기존 기본 용어집을 리셋하는 엔드포인트 정의
-@router.put("/api/v1/glossary/{user_id}/reset-default")
+@router.put("/api/v1/glossary/{user_id}/reset-default", tags=["Glossary"])
 async def reset_default_glossary(user_id: int):
     logger.info(f"Received request to reset default glossary for user_id: {user_id}")
 
     try:
         # 해당 유저의 모든 용어집에서 기본 용어집을 false로 설정
         result = collection.update_many(
-            {"userId": user_id}, 
+            {"userId": user_id},
             {"$set": {"isDefault": False}}
         )
 
@@ -133,7 +133,7 @@ async def reset_default_glossary(user_id: int):
         logger.info(f"Reset {result.modified_count} glossaries' default status to False.")
 
         return {"message": "All glossaries' default status reset successfully"}
-    
+
     except Exception as e:
         logger.error(f"Error resetting default glossary: {str(e)}")
         raise HTTPException(status_code=500, detail="기본 용어집 리셋 중 오류 발생")
@@ -154,7 +154,7 @@ async def add_word_pair(id: str, word_pair: WordPair):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/api/glossary/{glossaryId}/word-pair/{wordPairId}")
+@router.put("/api/glossary/{glossaryId}/word-pair/{wordPairId}", tags=["WordPair"])
 async def update_word_pair(glossaryId: str, wordPairId: str, word_pair: WordPair):
     try:
         logger.info(f"Received update request: glossaryId={glossaryId}, wordPairId={wordPairId}, data={word_pair}")
@@ -190,7 +190,7 @@ async def update_word_pair(glossaryId: str, wordPairId: str, word_pair: WordPair
         logger.error(f"Failed to update word pair: {e}")
         raise HTTPException(status_code=500, detail=f"단어쌍 수정 실패: {str(e)}")
 
-@router.delete("/api/glossary/{id}/word-pair/{index}")
+@router.delete("/api/glossary/{id}/word-pair/{index}", tags=["WordPair"])
 async def delete_word_pair(id: str, index: int):
     try:
         glossary = collection.find_one({"_id": ObjectId(id)})  # ObjectId 변환 추가
@@ -206,7 +206,7 @@ async def delete_word_pair(id: str, index: int):
         return {"message": "단어쌍 삭제 성공"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"단어쌍 삭제 실패: {str(e)}")
-    
+
 @router.get("/api/glossary/{id}/word-pair", tags=["WordPair"])
 async def get_word_pairs(id: str):
     try:
