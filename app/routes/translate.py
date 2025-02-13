@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 import logging
 from app.models.schemas import TranslateRequest, TranslateResponse
 from app.services.translation_service import translate_text  # ✅ FastAPI에서 사용 가능하도록 임포트
+from app.services.llama_service import setup_translation_chain_llama, create_metadata_array
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -86,4 +87,36 @@ async def translate_with_gpt(request: TranslateRequest):
 
     except Exception as e:
         logger.error(f"❌ Translation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/translate/gorani", tags=["Translation"])
+async def translate(request: TranslateRequest):
+
+    try:
+        print(request)
+
+        if request.target_lang == 'ko':
+            request.target_lang = 'korean'
+        elif request.target_lang == 'en':
+            request.target_lang = 'english'
+        else:
+            request.target_lang = 'Japanese'
+
+        chain = setup_translation_chain_llama()
+
+        response = chain.run({
+            "target_language": request.target_lang,
+            "glossary": create_metadata_array(request.text, 10),
+            "user_message": request.text
+        }).lstrip("\n")
+
+        print(create_metadata_array(request.text, 10))
+        print(response)
+
+        return TranslateResponse(
+            answer=response
+        )
+    
+    except Exception as e:
+        logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
