@@ -5,7 +5,9 @@ from models.translation import setup_translation_chain
 from services.llama_service import setup_translation_chain_llama, create_metadata_array
 import logging
 from routes.glossary_router import router as glossary_router
+from dotenv import load_dotenv
 
+load_dotenv()
 
 app = FastAPI()
 app.include_router(glossary_router)
