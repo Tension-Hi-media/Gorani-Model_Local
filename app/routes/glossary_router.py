@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from typing import List
 from pymongo import MongoClient
-from bson import ObjectId 
+from bson import ObjectId
 import os
 import logging
 from fastapi.responses import JSONResponse
@@ -54,7 +54,7 @@ async def save_glossary(glossary: Glossary):
 async def update_glossary_name(id: str, request: UpdateGlossaryNameRequest):
     if not request.name:
         raise HTTPException(status_code=400, detail="이름은 비어 있을 수 없습니다.")
-    
+
     glossary = collection.find_one({"_id": ObjectId(id)})
     if not glossary:
         raise HTTPException(status_code=404, detail="용어집을 찾을 수 없습니다.")
@@ -125,7 +125,7 @@ async def reset_default_glossary(user_id: int):
     try:
         # 해당 유저의 모든 용어집에서 기본 용어집을 false로 설정
         result = collection.update_many(
-            {"userId": user_id}, 
+            {"userId": user_id},
             {"$set": {"isDefault": False}}
         )
 
@@ -133,7 +133,7 @@ async def reset_default_glossary(user_id: int):
         logger.info(f"Reset {result.modified_count} glossaries' default status to False.")
 
         return {"message": "All glossaries' default status reset successfully"}
-    
+
     except Exception as e:
         logger.error(f"Error resetting default glossary: {str(e)}")
         raise HTTPException(status_code=500, detail="기본 용어집 리셋 중 오류 발생")
@@ -206,7 +206,7 @@ async def delete_word_pair(id: str, index: int):
         return {"message": "단어쌍 삭제 성공"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"단어쌍 삭제 실패: {str(e)}")
-    
+
 @router.get("/api/glossary/{id}/word-pair", tags=["WordPair"])
 async def get_word_pairs(id: str):
     try:
