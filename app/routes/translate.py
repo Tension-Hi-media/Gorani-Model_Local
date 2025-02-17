@@ -107,6 +107,8 @@ async def translate(request: TranslateRequest):
         else:
             request.target_lang = 'Japanese'
 
+        request.text = "누에섬 등대전망대에서 바다를 바라보니 마음이 편안해져"
+
         print(request)
 
         glossary = create_metadata_array(request.text, 10)
@@ -123,7 +125,7 @@ async def translate(request: TranslateRequest):
         print(glossary)
         print(response)
 
-        translated_text = response['text'].lstrip("\n\n")
+        translated_text = response['text'].strip()
 
         return TranslateResponse(
             answer=translated_text
