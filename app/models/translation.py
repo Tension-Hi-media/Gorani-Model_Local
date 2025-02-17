@@ -3,9 +3,14 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 
+# 환경 변수 로드
 load_dotenv()
 
 def setup_translation_chain():
+    """
+    GPT 번역 체인 설정 함수
+    """
+    # 번역 프롬프트 정의
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", """
@@ -21,18 +26,19 @@ def setup_translation_chain():
         ]
     )
 
+    # OpenAI LLM 모델 설정 (gpt-4o-mini 사용)
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
 
-    # 체인에 필요한 모든 입력 데이터 정의
+    # 체인 설정
     chain = (
-        {
-            "text": lambda x: x["text"],
-            "source_lang": lambda x: x.get("source_lang", "ko"),  # 기본값 설정
-            "target_lang": lambda x: x.get("target_lang", "en"),  # 기본값 설정
-        }
-        | prompt
-        | llm
-        | StrOutputParser()
+            {
+                "text": lambda x: x["text"],  # 올바른 lambda 구문
+                "source_lang": lambda x: x.get("source_lang", "ko"),  # 기본값 "ko"
+                "target_lang": lambda x: x.get("target_lang", "en"),  # 기본값 "en"
+            }
+            | prompt
+            | llm
+            | StrOutputParser()
     )
 
     return chain
