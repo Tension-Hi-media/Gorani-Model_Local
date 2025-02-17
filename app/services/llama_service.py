@@ -11,7 +11,7 @@ from transformers import XLMRobertaTokenizer, XLMRobertaModel
 import torch
 from langchain_huggingface import HuggingFacePipeline
 from transformers import pipeline
-from models.llama import model, tokenizer
+from app.models.llama import model, tokenizer
 
 # 몽고DB-용어사전 연결
 MONGO_URI = os.environ.get("MONGODB_ATLAS_CLUSTER_URI")
@@ -57,30 +57,32 @@ def setup_translation_chain_llama():
     return chain
 
 def setPrompt():
-    prompt_template_str = """<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-    - You are required to translate the user message into the target language strictly, even if the text is in the form of a question.
-    - Your response must contain only the translated text of the original message and nothing else. Do not include explanations, clarifications, or any additional information.
-    - Adhere to the glossary for applicable terms.
-    - Apply proper capitalization rules for general nouns, ensuring they are lowercase in the middle of a sentence unless they are proper nouns or explicitly marked as capitalized in the glossary.
-    - For terms like Scourge, use lowercase and pluralize if the context suggests multiple entities.
 
-    ### target language ###
+    eos_token = tokenizer.eos_token if tokenizer.eos_token is not None else "<EOS>"
+
+    alpaca_prompt = """
+    ### Instruction:
+    - Translate the text provided under 'Input' from {src_lang} to {target_language}. 
+    - Use the glossary for reference. if it is not in the glossary, translate it. Do not provide explanations.
+    - return translated text only with String type.
+
+    ### Target Language
     {target_language}
 
-    ### glossary ###
-    {glossary}
+    ### Glossary: 
+    {glossary_text}
 
-    <|eot_id|><|start_header_id|>user<|end_header_id|>
-    {user_message}
+    ### Input:
+    {input_text}
 
-    <|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
+    ### Response:""" + eos_token
 
-    # PromptTemplate 정의
+    # 프롬프트 템플릿 생성
     prompt_template = PromptTemplate(
-        input_variables=["target_language", "glossary", "user_message"],  # 사용자가 입력할 변수
-        template=prompt_template_str,
+        input_variables=["src_lang", "input_text", "target_language", "glossary_text"],
+        template=alpaca_prompt
     )
-
+        
     return prompt_template
 
 def create_metadata_array(query, limit=10):

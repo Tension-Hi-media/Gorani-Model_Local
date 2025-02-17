@@ -63,7 +63,7 @@ async def translate_with_gorani(text: str, source_lang: str = "ko", target_lang:
             logger.error(f"❌ 알 수 없는 오류 발생: {str(e)}")
             raise HTTPException(status_code=500, detail="번역 요청 중 알 수 없는 오류 발생")
 
-@router.post("/translate/onlygpt", response_model=TranslateResponse, tags=["Translation"])
+@router.post("/translate/OpenAI", response_model=TranslateResponse, tags=["Translation"])
 async def translate_with_gpt(request: TranslateRequest):
     """
     GPT 또는 Runpod의 Gorani(Llama) 모델을 사용하여 번역 수행
@@ -89,11 +89,16 @@ async def translate_with_gpt(request: TranslateRequest):
         logger.error(f"❌ Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.post("/translate/gorani", tags=["Translation"])
+@router.post("/translate/Gorani", tags=["Translation"])
 async def translate(request: TranslateRequest):
 
     try:
-        print(request)
+        if request.source_lang == 'ko':
+            request.source_lang = 'korean'
+        elif request.source_lang == 'en':
+            request.source_lang = 'english'
+        else:
+            request.source_lang = 'Japanese'
 
         if request.target_lang == 'ko':
             request.target_lang = 'korean'
@@ -102,19 +107,26 @@ async def translate(request: TranslateRequest):
         else:
             request.target_lang = 'Japanese'
 
+        print(request)
+
+        glossary = create_metadata_array(request.text, 10)
+
         chain = setup_translation_chain_llama()
 
-        response = chain.run({
+        response = chain.invoke({
+            "src_lang": request.source_lang,
+            "input_text": request.text,
             "target_language": request.target_lang,
-            "glossary": create_metadata_array(request.text, 10),
-            "user_message": request.text
-        }).lstrip("\n")
+            "glossary_text": glossary
+        })
 
-        print(create_metadata_array(request.text, 10))
+        print(glossary)
         print(response)
 
+        translated_text = response['text'].lstrip("\n\n")
+
         return TranslateResponse(
-            answer=response
+            answer=translated_text
         )
     
     except Exception as e:
