@@ -8,7 +8,8 @@ import os
 import pandas as pd
 import numpy as np
 from transformers import XLMRobertaTokenizer, XLMRobertaModel
-# torch 임포트 제거
+from langchain_huggingface import HuggingFacePipeline
+import torch
 from transformers import pipeline
 from app.models.llama import model, tokenizer
 
@@ -26,9 +27,9 @@ collection: Collection = db[COLLECTION_NAME]
 embedding_tokenizer = XLMRobertaTokenizer.from_pretrained("xlm-roberta-base")
 embedding_model = XLMRobertaModel.from_pretrained("xlm-roberta-base")
 
-# CPU로 설정 (GPU 사용하지 않음)
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 embedding_model = embedding_model.to(device)
+
 
 # 하이브리드 검색 가중치 설정
 BM25_MAX_VALUE = 10.0  # 설정 필요
@@ -37,6 +38,7 @@ VECTOR_SCORE_WEIGHT = 0.5
 TEXT_SCORE_WEIGHT = 0.5
 
 def setup_translation_chain_llama():
+
     prompt = setPrompt()
 
     # Hugging Face 파이프라인 설정
@@ -45,41 +47,75 @@ def setup_translation_chain_llama():
         model=model,
         tokenizer=tokenizer,
         return_full_text=False,
-        device=-1
     )
 
+    # LangChain에서 Hugging Face 파이프라인 Wrapping
+    llm = HuggingFacePipeline(pipeline=hf_pipeline)
+
     # LLMChain 설정
-    chain = LLMChain(llm=hf_pipeline, prompt=prompt)
+    chain = LLMChain(llm=llm, prompt=prompt)
 
     return chain
+
+# def setPrompt():
+
+#     eos_token = tokenizer.eos_token if tokenizer.eos_token is not None else "<EOS>"
+
+#     alpaca_prompt = """
+#     ### Instruction:
+#     - Translate the text provided under 'Input' from {src_lang} to {target_language}.
+#     - Use the glossary for reference. if it is not in the glossary, translate it. Do not provide explanations.
+#     - return translated text only with String type.
+
+#     ### Target Language
+#     {target_language}
+
+#     ### Glossary:
+#     {glossary_text}
+
+#     ### Input:
+#     {input_text}
+
+#     ### Response:""" + eos_token
+
+#     # 프롬프트 템플릿 생성
+#     prompt_template = PromptTemplate(
+#         input_variables=["src_lang", "input_text", "target_language", "glossary_text"],
+#         template=alpaca_prompt
+#     )
+
+#     return prompt_template
 
 def setPrompt():
 
     eos_token = tokenizer.eos_token if tokenizer.eos_token is not None else "<EOS>"
 
     alpaca_prompt = """
-    ### Instruction:
-    - Translate the text provided under 'Input' from {src_lang} to {target_language}. 
-    - Use the glossary for reference. if it is not in the glossary, translate it. Do not provide explanations.
-    - return translated text only with String type.
+    ### Task: Translation with Context and Glossary
+    You will be provided with a Input Text that needs to be translated accurately.
+    The source language of the Input Text is given under Source Language. Translate the Input Text into target language given under Target Language.
+    Use the glossary for reference. If a term is not found in the glossary, translate it normally. Do not provide explanations.
 
-    ### Target Language
+    ### Source Language:
+    {src_lang}
+
+    ### Target Language:
     {target_language}
 
-    ### Glossary: 
+    ### Glossary:
     {glossary_text}
 
-    ### Input:
+    ### Input Text:
     {input_text}
 
-    ### Response:""" + eos_token
+    ### Translated Output:""" + eos_token
 
     # 프롬프트 템플릿 생성
     prompt_template = PromptTemplate(
         input_variables=["src_lang", "input_text", "target_language", "glossary_text"],
         template=alpaca_prompt
     )
-        
+
     return prompt_template
 
 def create_metadata_array(query, limit=10):
@@ -93,6 +129,8 @@ def create_metadata_array(query, limit=10):
     metadata_array = []
     for result in search_results[:limit]:
         metadata = result.get("metadata", {})
+
+        # 배열 추가
         metadata_array.append(metadata)
 
     # metadata array를 JSON string으로 변환
@@ -104,7 +142,7 @@ def hybrid_search(query, length=10, model=embedding_model, tokenizer=embedding_t
     # 벡터 및 텍스트 검색 수행
     embedding = get_embedding_from_xlm_roberta(query, model, tokenizer)
     vector_results = vector_search(embedding, "vector_index")
-    text_results = text_search(query, "text_index")
+    text_results = text_search(query,"text_index")
 
     # 결과 병합
     combined_results = {}
@@ -138,26 +176,39 @@ def hybrid_search(query, length=10, model=embedding_model, tokenizer=embedding_t
 def get_embedding_from_xlm_roberta(text, model, tokenizer):
     """
     XLM-RoBERTa 모델을 사용해 텍스트 임베딩 생성
+
+    Args:
+        text (str or List[str]): 임베딩을 생성할 텍스트 또는 텍스트 리스트
+        model: 사전 학습된 XLM-RoBERTa 모델
+        tokenizer: 사전 학습된 XLM-RoBERTa 토크나이저
+
+    Returns:
+        List[float] or List[List[float]]: 입력 텍스트의 임베딩
     """
 
     # 입력 텍스트가 문자열인 경우 리스트로 변환
     if isinstance(text, str):
         text = [text]
 
+    # if model is not uploaded on device
+    if not model.device.type == device:
+        model = model.to(device)
+
     # 텍스트 토큰화
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
 
-    # 모델로 임베딩 생성 (CPU에서 실행)
-    outputs = model(**inputs)
+    # 모델로 임베딩 생성
+    with torch.no_grad():
+        outputs = model(**inputs)
 
     # CLS 토큰 임베딩 사용
-    embeddings = outputs.last_hidden_state[:, 0, :].detach().numpy()  # NumPy 배열로 변환
+    embeddings = outputs.last_hidden_state[:, 0, :].cpu().tolist()
 
     # 입력 텍스트가 단일 문장이었다면 첫 번째 임베딩만 반환
     if len(embeddings) == 1:
-        return embeddings[0].tolist()  # NumPy 배열을 리스트로 변환하여 반환
-    return embeddings.tolist()  # 전체 임베딩을 리스트로 변환하여 반환
-
+        return embeddings[0]
+    return embeddings
 
 # @title
 def normalize_vector_score(vector_score):

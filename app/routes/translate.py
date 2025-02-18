@@ -1,5 +1,6 @@
 import httpx
 import asyncio
+import re
 from fastapi import APIRouter, HTTPException
 import logging
 from app.models.schemas import TranslateRequest, TranslateResponse
@@ -107,7 +108,6 @@ async def translate(request: TranslateRequest):
         else:
             request.target_lang = 'Japanese'
 
-        request.text = "누에섬 등대전망대에서 바다를 바라보니 마음이 편안해져"
 
         print(request)
 
@@ -125,10 +125,13 @@ async def translate(request: TranslateRequest):
         print(glossary)
         print(response)
 
-        translated_text = response['text'].strip()
+        # translated_text = response['text'].strip()
+
+        translated_text = response['text']
+        cleaned_text = re.sub(r'^assistant\s*', '', translated_text).strip()
 
         return TranslateResponse(
-            answer=translated_text
+            answer=cleaned_text
         )
     
     except Exception as e:

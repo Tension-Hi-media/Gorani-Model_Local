@@ -1,18 +1,19 @@
 from unsloth import FastLanguageModel
 
-max_seq_length = 8192 # Choose any! We auto support RoPE Scaling internally!
+max_seq_length = 1024 # Choose any! We auto support RoPE Scaling internally!
 dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
 load_in_4bit = True # Use 4bit quantization to reduce memory usage. Can be False.
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="Bring2It2On/gorani-9B-4bit", # YOUR MODEL YOU USED FOR TRAINING
+    model_name="lucian1120/gorani-3.1-8B-4bit", # YOUR MODEL YOU USED FOR TRAINING
     max_seq_length = max_seq_length,
-    device_map="auto",
     dtype = dtype,
     load_in_4bit = load_in_4bit,
 )
+
 FastLanguageModel.for_inference(model) # Enable native 2x faster inference
 
 # haeun0420/gorani-1B-4bit
 # unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit
 # Bring2It2On/gorani-9B-4bit
+# lucian1120/gorani-3.1-8B-4bit
