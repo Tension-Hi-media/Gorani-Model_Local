@@ -1,17 +1,21 @@
-from pymongo import MongoClient
-from pymongo.database import Database
-from pymongo.collection import Collection
 import json
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-import os
-import pandas as pd
-import numpy as np
 from transformers import XLMRobertaTokenizer, XLMRobertaModel
 from langchain_huggingface import HuggingFacePipeline
 import torch
 from transformers import pipeline
 from app.models.llama import model, tokenizer
+from dotenv import load_dotenv
+# from app.services.MongoDB import collection
+
+# .env 파일 로드
+load_dotenv()
+
+import os
+from pymongo import MongoClient
+from pymongo.database import Database
+from pymongo.collection import Collection
 
 # 몽고DB-용어사전 연결
 MONGO_URI = os.environ.get("MONGODB_ATLAS_CLUSTER_URI")
@@ -29,7 +33,6 @@ embedding_model = XLMRobertaModel.from_pretrained("xlm-roberta-base")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 embedding_model = embedding_model.to(device)
-
 
 # 하이브리드 검색 가중치 설정
 BM25_MAX_VALUE = 10.0  # 설정 필요
@@ -57,34 +60,22 @@ def setup_translation_chain_llama():
 
     return chain
 
-# def setPrompt():
+def setChain1():
+    prompt = setPrompt()
 
-#     eos_token = tokenizer.eos_token if tokenizer.eos_token is not None else "<EOS>"
+    # Hugging Face 파이프라인 설정
+    hf_pipeline = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        return_full_text=False,
+    )
 
-#     alpaca_prompt = """
-#     ### Instruction:
-#     - Translate the text provided under 'Input' from {src_lang} to {target_language}.
-#     - Use the glossary for reference. if it is not in the glossary, translate it. Do not provide explanations.
-#     - return translated text only with String type.
+    llm = HuggingFacePipeline(pipeline=hf_pipeline)
 
-#     ### Target Language
-#     {target_language}
+    chain = LLMChain(llm=llm, prompt=prompt)
 
-#     ### Glossary:
-#     {glossary_text}
-
-#     ### Input:
-#     {input_text}
-
-#     ### Response:""" + eos_token
-
-#     # 프롬프트 템플릿 생성
-#     prompt_template = PromptTemplate(
-#         input_variables=["src_lang", "input_text", "target_language", "glossary_text"],
-#         template=alpaca_prompt
-#     )
-
-#     return prompt_template
+    return chain
 
 def setPrompt():
 
@@ -94,7 +85,56 @@ def setPrompt():
     ### Task: Translation with Context and Glossary
     You will be provided with a Input Text that needs to be translated accurately.
     The source language of the Input Text is given under Source Language. Translate the Input Text into target language given under Target Language.
-    Use the glossary for reference. If a term is not found in the glossary, translate it normally. Do not provide explanations.
+    Use the glossary for reference. If any of the words  is not found in the glossary, translate it normally. 
+    Respond with only the translation of the Input Text. Do not provide any explanations.
+
+    ### Example 1:
+    **Source Language:** Korean
+    **Target Language:** English
+    **Glossary:** 
+    ["KO": "고라니", "ENG": "gorani", "JPN": "キバノロ"]
+    **Input Text:** 고라니는 한국의 토종 동물입니다.
+    **Translated Output:** Gorani is a native animal of Korea.
+
+    ### Example 2:
+    **Source Language:** Korean
+    **Target Language:** Japanese
+    **Glossary:** 
+    ["KO": "고라니", "ENG": "gorani", "JPN": "キバノロ"]
+    **Input Text:** 고라니는 한국의 토종 동물입니다.
+    **Translated Output:** ゴラニは韓国の在来動物です。
+
+    ### Example 3:
+    **Source Language:** English
+    **Target Language:** Korean
+    **Glossary:** 
+    ["KO": "사과", "ENG": "apple", "JPN": "リンゴ"]
+    **Input Text:** The apple is delicious.
+    **Translated Output:** 사과는 맛있습니다.
+
+    ### Example 4:
+    **Source Language:** English
+    **Target Language:** Japanese
+    **Glossary:** 
+    ["KO": "사과", "ENG": "apple", "JPN": "リンゴ"]
+    **Input Text:** The apple is delicious.
+    **Translated Output:** リンゴは美味しいです。
+
+    ### Example 5:
+    **Source Language:** Japanese
+    **Target Language:** Korean
+    **Glossary:** 
+    ["KO": "학교", "ENG": "school", "JPN": "学校"]
+    **Input Text:** 学生が学校に行きます。
+    **Translated Output:** 학생들이 학교에 갑니다.
+
+    ### Example 6:
+    **Source Language:** Japanese
+    **Target Language:** English
+    **Glossary:** 
+    ["KO": "학교", "ENG": "school", "JPN": "学校"]
+    **Input Text:** 学生が学校に行きます。
+    **Translated Output:** The students go to school.
 
     ### Source Language:
     {src_lang}
@@ -108,7 +148,7 @@ def setPrompt():
     ### Input Text:
     {input_text}
 
-    ### Translated Output:""" + eos_token
+    ### Translated Output:""" + eos_token + "<|start_header_id|>assistant<|end_header_id|>"
 
     # 프롬프트 템플릿 생성
     prompt_template = PromptTemplate(
@@ -289,3 +329,4 @@ def text_search(query, text_index_name, limit=25):
 
     results = collection.aggregate(pipeline)
     return list(results)
+

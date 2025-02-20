@@ -18,3 +18,5 @@ venv/
 
 # 테스트 출력
 .pytest_cache/
+
+unsloth_compiled_cache
