@@ -48,7 +48,7 @@ async def translate(request: TranslateRequest):
 async def translate(request: TranslateRequest):
 
     try:
-        print(request)
+        print("번역 요청 발생!! -> ",request)
 
         graph = setup_translation_graph_LangGorani()
 
@@ -56,9 +56,11 @@ async def translate(request: TranslateRequest):
         
         response = graph.invoke(initial_state)
 
-        print(response)
+        print("Response : ",response)
 
         translated_text = response["messages"][-1].content
+
+        print("번역 결과 : ",translated_text)
 
         return TranslateResponse(
             answer=translated_text

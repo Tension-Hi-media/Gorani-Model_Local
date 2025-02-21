@@ -35,10 +35,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 embedding_model = embedding_model.to(device)
 
 # 하이브리드 검색 가중치 설정
-BM25_MAX_VALUE = 10.0  # 설정 필요
-BM25_MIN_VALUE = 0.0   # 설정 필요
-VECTOR_SCORE_WEIGHT = 0.5
-TEXT_SCORE_WEIGHT = 0.5
+BM25_MAX_VALUE = 20.0  # 설정 필요
+BM25_MIN_VALUE = 8.0   # 설정 필요
+VECTOR_SCORE_WEIGHT = 0.3
+TEXT_SCORE_WEIGHT = 0.7
 
 def setup_translation_chain_llama():
 
@@ -209,9 +209,18 @@ def hybrid_search(query, length=10, model=embedding_model, tokenizer=embedding_t
             combined_results[doc_id]["textScore"] = text_score
             combined_results[doc_id]["score"] = calculate_convex_score(vector_score, text_score)
 
-    # 결과 정렬
-    sorted_results = sorted(combined_results.values(), key=lambda x: x["score"], reverse=True)
-    return sorted_results[0:length]
+    # score가 0.3 미만인 결과는 제외
+    filtered_results = [result for result in combined_results.values() if result["score"] >= 0.5]
+
+    # 결과 정렬 (score 높은 순으로 내림차순)
+    sorted_results = sorted(filtered_results, key=lambda x: x["score"], reverse=True)
+
+    # 상위 length개의 결과만 반환
+    return sorted_results[:length]
+
+    # # 결과 정렬
+    # sorted_results = sorted(combined_results.values(), key=lambda x: x["score"], reverse=True)
+    # return sorted_results[0:length]
 
 def get_embedding_from_xlm_roberta(text, model, tokenizer):
     """
