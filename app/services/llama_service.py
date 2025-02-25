@@ -85,7 +85,7 @@ def setPrompt():
     ### Task: Translation with Context and Glossary
     You will be provided with a Input Text that needs to be translated accurately.
     The source language of the Input Text is given under Source Language. Translate the Input Text into target language given under Target Language.
-    Use the glossary for reference. If any of the words  is not found in the glossary, translate it normally. 
+    Use the glossary for reference. If any of the words  is not found in the glossary, translate it normally.
     Respond with only the translation of the Input Text. Do not provide any explanations.
 
     ### Example 1:
@@ -338,4 +338,3 @@ def text_search(query, text_index_name, limit=25):
 
     results = collection.aggregate(pipeline)
     return list(results)
-

@@ -10,7 +10,7 @@ from app.services.langGorani_service import setup_translation_graph_LangGorani
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-    
+
 @router.post("/translate/Gorani", tags=["Translation"])
 async def translate(request: TranslateRequest):
 
@@ -39,7 +39,7 @@ async def translate(request: TranslateRequest):
         return TranslateResponse(
             answer=cleaned_text
         )
-    
+
     except Exception as e:
         logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -53,7 +53,7 @@ async def translate(request: TranslateRequest):
         graph = setup_translation_graph_LangGorani()
 
         initial_state = {"messages": [HumanMessage(content=request.text)], "targetLanguage" : request.target_lang, "source_lang" : request.source_lang}
-        
+
         response = graph.invoke(initial_state)
 
         print("Response : ",response)
@@ -65,7 +65,7 @@ async def translate(request: TranslateRequest):
         return TranslateResponse(
             answer=translated_text
         )
-    
+
     except Exception as e:
         logging.error(f"Translation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
