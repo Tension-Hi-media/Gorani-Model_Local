@@ -91,15 +91,15 @@ def setPrompt():
     ### Example 1:
     **Source Language:** Korean
     **Target Language:** English
-    **Glossary:** 
+    **Glossary:**
     ["KO": "고라니", "ENG": "gorani", "JPN": "キバノロ"]
-    **Input Text:** 고라니는 한국의 토종 동물입니다.
-    **Translated Output:** Gorani is a native animal of Korea.
+    **Input Text:** 고라니는 한국의 토종 동물입니까?
+    **Translated Output:** Is gorani a native animal of Korea?
 
     ### Example 2:
     **Source Language:** Korean
     **Target Language:** Japanese
-    **Glossary:** 
+    **Glossary:**
     ["KO": "고라니", "ENG": "gorani", "JPN": "キバノロ"]
     **Input Text:** 고라니는 한국의 토종 동물입니다.
     **Translated Output:** ゴラニは韓国の在来動物です。
@@ -107,15 +107,15 @@ def setPrompt():
     ### Example 3:
     **Source Language:** English
     **Target Language:** Korean
-    **Glossary:** 
+    **Glossary:**
     ["KO": "사과", "ENG": "apple", "JPN": "リンゴ"]
-    **Input Text:** The apple is delicious.
-    **Translated Output:** 사과는 맛있습니다.
+    **Input Text:** Please explain about the apple.
+    **Translated Output:** 사과에 대해 설명해주세요.
 
     ### Example 4:
     **Source Language:** English
     **Target Language:** Japanese
-    **Glossary:** 
+    **Glossary:**
     ["KO": "사과", "ENG": "apple", "JPN": "リンゴ"]
     **Input Text:** The apple is delicious.
     **Translated Output:** リンゴは美味しいです。
@@ -123,7 +123,7 @@ def setPrompt():
     ### Example 5:
     **Source Language:** Japanese
     **Target Language:** Korean
-    **Glossary:** 
+    **Glossary:**
     ["KO": "학교", "ENG": "school", "JPN": "学校"]
     **Input Text:** 学生が学校に行きます。
     **Translated Output:** 학생들이 학교에 갑니다.
@@ -131,7 +131,7 @@ def setPrompt():
     ### Example 6:
     **Source Language:** Japanese
     **Target Language:** English
-    **Glossary:** 
+    **Glossary:**
     ["KO": "학교", "ENG": "school", "JPN": "学校"]
     **Input Text:** 学生が学校に行きます。
     **Translated Output:** The students go to school.

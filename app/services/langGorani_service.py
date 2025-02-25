@@ -92,18 +92,6 @@ def setPrompt2():
 
     **Response:** Do you think apples are delicious?
 
-    ### Example 1
-    **Original Text:** 사과는 맛있을까?
-
-    **Target Language:** english
-
-    **gloassary:**
-    ["KO": "사과", "ENG": "apple", "JPN": "リンゴ"]
-
-    **Translated Text:** Yes, the apple is delicious
-
-    **Response:** Do you think apples are delicious?
-
     ### Response:"""
 
     # PromptTemplate 정의
